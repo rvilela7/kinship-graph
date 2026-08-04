@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Nuvem Genealógica Interativa</title>
+  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #121218;
+      color: #ffffff;
+      font-family: system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+    }
+    #header {
+      position: absolute;
+      top: 15px;
+      left: 20px;
+      z-index: 10;
+      pointer-events: none;
+    }
+    h1 {
+      margin: 0 0 5px 0;
+      font-size: 1.4rem;
+      color: #8AB4F8;
+    }
+    p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #a0a0a0;
+    }
+    #mynetwork {
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="header">
+    <h1>Nuvem Genealógica</h1>
+    <p>Clique num nó para expandir os parentes com animação</p>
+  </div>
+
+  <div id="mynetwork"></div>
+
+  <script type="text/javascript">
+    const nodesDataSet = new vis.DataSet([]);
+    const edgesDataSet = new vis.DataSet([]);
+    let network = null;
+
+    function inicializarGrafo() {
+      const container = document.getElementById('mynetwork');
+      const data = { nodes: nodesDataSet, edges: edgesDataSet };
+
+      const options = {
+        nodes: {
+          borderWidth: 2,
+          shadow: true,
+          shape: 'box',
+          margin: 12,
+          color: {
+            border: '#4285F4',
+            background: '#1a237e',
+            highlight: { border: '#8AB4F8', background: '#283593' }
+          },
+          font: { color: '#ffffff', size: 14, face: 'system-ui' }
+        },
+        edges: {
+          width: 2,
+          color: { color: '#5f6368', highlight: '#8AB4F8' },
+          arrows: { to: { enabled: true, scaleFactor: 0.7 } },
+          smooth: { type: 'cubicBezier', roundness: 0.5 },
+          font: { color: '#e0e0e0', size: 11, strokeWidth: 3, strokeColor: '#121218' }
+        },
+        physics: {
+          solver: 'forceAtlas2Based',
+          forceAtlas2Based: {
+            gravitationalConstant: -100,
+            centralGravity: 0.005,
+            springLength: 200,
+            springConstant: 0.05,
+            damping: 0.4
+          },
+          stabilization: { iterations: 150 }
+        },
+        interaction: { hover: true, zoomView: true, dragNodes: true }
+      };
+
+      network = new vis.Network(container, data, options);
+
+      // Evento de clique para carregar parentes dinamicamente
+      network.on("click", function (params) {
+        if (params.nodes.length > 0) {
+          const nodeId = params.nodes[0];
+          carregarFamilia(nodeId);
+        }
+      });
+    }
+
+    async function carregarFamilia(id) {
+      try {
+        const response = await fetch(`/api/family/${id}`);
+        if (!response.ok) throw new Error("Erro na API");
+
+        const data = await response.json();
+
+        // Adiciona nós sem duplicar
+        data.nodes.forEach(node => {
+          if (!nodesDataSet.get(node.id)) {
+            nodesDataSet.add(node);
+          }
+        });
+
+        // Adiciona conexões sem duplicar
+        data.edges.forEach(edge => {
+          const edgeId = `${edge.from}-${edge.to}`;
+          if (!edgesDataSet.get(edgeId)) {
+            edgesDataSet.add({ id: edgeId, ...edge });
+          }
+        });
+
+      } catch (err) {
+        console.error("Erro ao carregar família:", err);
+      }
+    }
+
+    window.onload = function() {
+      inicializarGrafo();
+      carregarFamilia('START');
+    };
+  </script>
+</body>
+</html>
+
