@@ -1,0 +1,44 @@
+name: Deploy Kinship Graph
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH na VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            # 1. Navegar até à pasta do projeto
+            cd ~/kinship-graph
+
+            # 2. Atualizar o código do repositório
+            git pull origin main
+
+            # 3. Recompilar a imagem Docker
+            docker build -t kinship-graph:1.0 .
+
+            # 4. Reiniciar o container
+            docker stop kinship-graph 2>/dev/null || true
+            docker rm kinship-graph 2>/dev/null || true
+
+            docker run -d \
+              --name kinship-graph \
+              --network ruivil-net \
+              --restart unless-stopped \
+              --memory="128m" \
+              --env-file .env \
+              -p 3000:3000 \
+              kinship-graph:1.0
+
+            # 5. Limpar imagens antigas sem uso
+            docker image prune -f
