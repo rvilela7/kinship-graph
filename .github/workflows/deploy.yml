@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Deploy via SSH na VM
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
