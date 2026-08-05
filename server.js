@@ -25,7 +25,6 @@ fastify.get('/api/family/:id', async (request, reply) => {
         id, full_name AS label, father_id, mother_id, birth_year, 'origem' AS relacao
       FROM persons
       WHERE id = $1
-
       UNION ALL
 
       -- 2. Os pais da pessoa consultada
