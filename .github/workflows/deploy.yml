@@ -10,7 +10,8 @@ on:
       - 'Dockerfile'
       - 'docker-compose.yml'
       - 'package.json'
-      - 'schema.sql'      
+      - 'schema.sql'
+      - 'public/**'      #in firebase as well
 
 jobs:
   deploy:
