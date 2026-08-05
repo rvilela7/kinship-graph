@@ -11,7 +11,7 @@ on:
       - 'docker-compose.yml'
       - 'package.json'
       - 'schema.sql'
-      - 'public/**'      #in firebase as well
+      - 'public/**' 
 
 jobs:
   deploy:
@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Deploy via SSH na VM
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}

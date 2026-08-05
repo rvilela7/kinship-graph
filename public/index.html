@@ -46,6 +46,11 @@
   <div id="mynetwork"></div>
 
   <script type="text/javascript">
+    // A constante determina o URL base da API com base no domínio em que a aplicação é executada
+    const API_BASE_URL = window.location.hostname.includes('web.app') || window.location.hostname.includes('firebaseapp.com')
+      ? 'https://vilelaeline.duckdns.org'
+      : '';
+
     const nodesDataSet = new vis.DataSet([]);
     const edgesDataSet = new vis.DataSet([]);
     let network = null;
@@ -90,7 +95,7 @@
 
       network = new vis.Network(container, data, options);
 
-      // Evento de clique para carregar parentes dinamicamente
+      // O ouvinte de eventos de clique desencadeia o carregamento dos parentes do nó selecionado
       network.on("click", function (params) {
         if (params.nodes.length > 0) {
           const nodeId = params.nodes[0];
@@ -101,19 +106,20 @@
 
     async function carregarFamilia(id) {
       try {
-        const response = await fetch(`/api/family/${id}`);
+        // A função efetua a requisição utilizando o URL base dinâmico
+        const response = await fetch(`${API_BASE_URL}/api/family/${id}`);
         if (!response.ok) throw new Error("Erro na API");
 
         const data = await response.json();
 
-        // Adiciona nós sem duplicar
+        // Adiciona novos nós ao conjunto de dados sem duplicar registos existentes
         data.nodes.forEach(node => {
           if (!nodesDataSet.get(node.id)) {
             nodesDataSet.add(node);
           }
         });
 
-        // Adiciona conexões sem duplicar
+        // Adiciona novas conexões ao conjunto de dados sem duplicar registos existentes
         data.edges.forEach(edge => {
           const edgeId = `${edge.from}-${edge.to}`;
           if (!edgesDataSet.get(edgeId)) {
@@ -133,4 +139,3 @@
   </script>
 </body>
 </html>
-
