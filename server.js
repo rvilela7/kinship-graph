@@ -1,16 +1,27 @@
-
-require('dotenv').config(); // 1. Carrega o dotenv logo na PRIMEIRA linha para ler o ficheiro .env
+require('dotenv').config(); // 1. O módulo dotenv é carregado na primeira linha para ler o ficheiro .env
 
 const Fastify = require('fastify');
+const cors = require('@fastify/cors');
 const { Pool } = require('pg');
 
 const fastify = Fastify({ logger: true });
 
+// 2. O plugin de CORS é registado para autorizar pedidos do Firebase, do domínio próprio e do ambiente local
+fastify.register(cors, {
+  origin: [
+    'https://project-7ac65c12-8fa7-49e2-b5f.web.app',
+    'https://project-7ac65c12-8fa7-49e2-b5f.firebaseapp.com',
+    'https://vilelaeline.duckdns.org',
+    'http://localhost:3000'
+  ],
+  methods: ['GET', 'POST', 'OPTIONS']
+});
 
-const pool = new Pool({ // 2. Configura a Pool usando APENAS variáveis de ambiente
+// 3. O pool de conexões é configurado utilizando exclusivamente variáveis de ambiente
+const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD, // NUNCA colocar a senha real aqui!
+  password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME || 'kinship_db',
   port: process.env.DB_PORT || 5432,
 });
@@ -20,14 +31,14 @@ fastify.get('/api/family/:id', async (request, reply) => {
 
   try {
     const query = `
-      -- 1. A pessoa consultada
+      -- 1. Seleciona a pessoa consultada
       SELECT 
         id, full_name AS label, father_id, mother_id, birth_year, 'origem' AS relacao
       FROM persons
       WHERE id = $1
       UNION ALL
 
-      -- 2. Os pais da pessoa consultada
+      -- 2. Seleciona os pais da pessoa consultada
       SELECT 
         id, full_name AS label, father_id, mother_id, birth_year, 'parent' AS relacao
       FROM persons
@@ -39,7 +50,7 @@ fastify.get('/api/family/:id', async (request, reply) => {
 
       UNION ALL
 
-      -- 3. Os filhos da pessoa consultada
+      -- 3. Seleciona os filhos da pessoa consultada
       SELECT 
         id, full_name AS label, father_id, mother_id, birth_year, 'child' AS relacao
       FROM persons
@@ -62,7 +73,7 @@ fastify.get('/api/family/:id', async (request, reply) => {
         nodes.push({ id: row.id, label: labelComAno });
       }
 
-      // 1. Se for a pessoa de origem: liga aos seus pais
+      // 1. Se o registo corresponder à pessoa de origem, associa-a aos respetivos pais
       if (row.id === id) {
         if (row.father_id) {
           edges.push({ from: row.father_id, to: row.id, label: 'pai' });
@@ -72,7 +83,7 @@ fastify.get('/api/family/:id', async (request, reply) => {
         }
       }
 
-      // 2. Se for um pai/mãe obtido: liga desse progenitor para a pessoa consultada
+      // 2. Se o registo for um progenitor obtido, associa esse progenitor à pessoa consultada
       if (row.relacao === 'parent') {
         if (origemRow && origemRow.father_id === row.id) {
           edges.push({ from: row.id, to: id, label: 'pai' });
@@ -82,13 +93,11 @@ fastify.get('/api/family/:id', async (request, reply) => {
         }
       }
 
-      // 3. Se for um filho obtido: liga SEMPRE do progenitor (que pode ser pai ou mãe) para o filho
+      // 3. Se o registo for um filho obtido, estabelece a ligação do progenitor para o filho
       if (row.relacao === 'child') {
         if (row.father_id === id) {
-          // O nó consultado (id) é o PAI do filho (row.id)
           edges.push({ from: id, to: row.id, label: 'pai' });
         } else if (row.mother_id === id) {
-          // O nó consultado (id) é a MÃE do filho (row.id)
           edges.push({ from: id, to: row.id, label: 'mãe' });
         }
       }
@@ -101,7 +110,7 @@ fastify.get('/api/family/:id', async (request, reply) => {
   }
 });
 
-// Arrancar o servidor na porta 3000
+// O servidor é inicializado na porta 3000
 const start = async () => {
   try {
     await fastify.listen({ port: 3000, host: '0.0.0.0' });
